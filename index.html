@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USD/VND Tracker</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      text-align: center;
+      margin: 0.5rem 0 1rem 0;
+    }
+    .result {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    .banks {
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    .banks div {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💵 USD / VND Tracker</h1>
+    <p id="rate">Loading rate...</p>
+    <input id="vnd" type="number" placeholder="Enter VND amount">
+    <p id="usd" class="result"></p>
+    <div class="banks" id="banks"></div>
+  </div>
+
+  <script>
+    async function fetchRate() {
+      const res = await fetch("https://api.exchangerate.host/latest?base=USD&symbols=VND");
+      const data = await res.json();
+      return { rate: data.rates.VND, date: data.date };
+    }
+
+    function calcSpread(usd, spread) {
+      return (usd * (1 - spread / 100)).toFixed(2);
+    }
+
+    async function main() {
+      const { rate, date } = await fetchRate();
+      const rateText = document.getElementById("rate");
+      rateText.innerHTML = `1 USD = <b>${rate.toLocaleString()}</b> VND<br><small>Updated ${date}</small>`;
+
+      const input = document.getElementById("vnd");
+      const usdEl = document.getElementById("usd");
+      const banksEl = document.getElementById("banks");
+
+      input.addEventListener("input", () => {
+        const vnd = parseFloat(input.value);
+        if (!vnd) {
+          usdEl.textContent = "";
+          banksEl.innerHTML = "";
+          return;
+        }
+        const usd = (vnd / rate).toFixed(2);
+        usdEl.textContent = `≈ ${usd} USD (mid-market)`;
+
+        const spreads = [
+          { name: "Wise (0.5%)", s: 0.5 },
+          { name: "Citi (1.5%)", s: 1.5 },
+          { name: "Chase (2%)", s: 2 },
+          { name: "Wells Fargo (2.5%)", s: 2.5 },
+        ];
+
+        banksEl.innerHTML = spreads
+          .map(b => `<div><span>${b.name}</span><span>${calcSpread(usd, b.s)} USD</span></div>`)
+          .join("");
+      });
+    }
+
+    main();
+  </script>
+</body>
+</html>
